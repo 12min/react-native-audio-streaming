@@ -2,21 +2,21 @@ PODS:
   - StreamingKit (0.1.29)
 
 DEPENDENCIES:
-  - StreamingKit (from `https://github.com/tlenclos/StreamingKit.git`, branch `icecast`)
+  - StreamingKit (from `https://github.com/goshakkk/StreamingKit.git`, branch `playback-rate`)
 
 EXTERNAL SOURCES:
   StreamingKit:
-    :branch: icecast
-    :git: https://github.com/tlenclos/StreamingKit.git
+    :branch: playback-rate
+    :git: https://github.com/goshakkk/StreamingKit.git
 
 CHECKOUT OPTIONS:
   StreamingKit:
-    :commit: c52d60bee8776e9aa36b3975d9ef78a9dcf74a26
-    :git: https://github.com/tlenclos/StreamingKit.git
+    :commit: 90a8af6cb87706932239ff0b0289f544fd97cce8
+    :git: https://github.com/goshakkk/StreamingKit.git
 
 SPEC CHECKSUMS:
   StreamingKit: c329785aaef3ac142d4ae388345bfe1ed23cfd45
 
-PODFILE CHECKSUM: f92b06859ab10832ebde9d3b42f0ae26a6691475
+PODFILE CHECKSUM: 19562dab552a31e14ff2b3946f8f038453929472
 
-COCOAPODS: 1.0.1
+COCOAPODS: 1.1.1

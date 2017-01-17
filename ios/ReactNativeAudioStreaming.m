@@ -99,6 +99,15 @@ RCT_EXPORT_METHOD(play:(NSString *) streamUrl options:(NSDictionary *)options)
    [self setNowPlayingInfo:true];
 }
 
+RCT_EXPORT_METHOD(setPlaybackRate:(double) rate)
+{
+   if (!self.audioPlayer) {
+      return;
+   }
+
+   self.audioPlayer.rate = rate;
+}
+
 RCT_EXPORT_METHOD(seekToTime:(double) seconds)
 {
    if (!self.audioPlayer) {
@@ -177,6 +186,7 @@ RCT_EXPORT_METHOD(getStatus: (RCTResponseSenderBlock) callback)
    NSString *status = @"STOPPED";
    NSNumber *duration = [NSNumber numberWithFloat:self.audioPlayer.duration];
    NSNumber *progress = [NSNumber numberWithFloat:self.audioPlayer.progress];
+   NSNumber *playbackRate = [NSNumber numberWithFloat:self.audioPlayer.rate];
 
    if (!self.audioPlayer) {
       status = @"ERROR";
@@ -188,7 +198,7 @@ RCT_EXPORT_METHOD(getStatus: (RCTResponseSenderBlock) callback)
       status = @"BUFFERING";
    }
    
-   callback(@[[NSNull null], @{@"status": status, @"progress": progress, @"duration": duration, @"url": self.lastUrlString}]);
+   callback(@[[NSNull null], @{@"status": status, @"progress": progress, @"duration": duration, @"url": self.lastUrlString, @"playbackRate": playbackRate}]);
 }
 
 #pragma mark - StreamingKit Audio Player
