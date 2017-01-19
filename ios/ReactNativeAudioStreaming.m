@@ -82,6 +82,10 @@ RCT_EXPORT_METHOD(play:(NSString *) streamUrl options:(NSDictionary *)options)
 
    self.lastUrlString = streamUrl;
    self.showNowPlayingInfo = false;
+
+   if ([options objectForKey:@"streamTitle"]) {
+     self.currentSong = [options objectForKey:@"streamTitle"];
+   }
    
    if ([options objectForKey:@"showIniOSMediaCenter"]) {
       self.showNowPlayingInfo = [[options objectForKey:@"showIniOSMediaCenter"] boolValue];
@@ -226,7 +230,7 @@ RCT_EXPORT_METHOD(getStatus: (RCTResponseSenderBlock) callback)
 - (void)audioPlayer:(STKAudioPlayer *)audioPlayer didReadStreamMetadata:(NSDictionary *)dictionary {
    NSLog(@"AudioPlayer SONG NAME  %@", dictionary[@"StreamTitle"]);
    
-   self.currentSong = dictionary[@"StreamTitle"];
+   self.currentSong = dictionary[@"StreamTitle"] ? dictionary[@"StreamTitle"] : self.currentSong;
    [self.bridge.eventDispatcher sendDeviceEventWithName:@"AudioBridgeEvent" body:@{
                                                                                    @"status": @"METADATA_UPDATED",
                                                                                    @"key": @"StreamTitle",
