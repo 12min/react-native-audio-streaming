@@ -86,11 +86,15 @@ RCT_EXPORT_METHOD(play:(NSString *) streamUrl options:(NSDictionary *)options)
    if ([options objectForKey:@"streamTitle"]) {
      self.currentSong = [options objectForKey:@"streamTitle"];
    }
-   
+
+   if ([options objectForKey:@"appTitle"]) {
+     self.appTitle = [options objectForKey:@"appTitle"];
+   }
+
    if ([options objectForKey:@"showIniOSMediaCenter"]) {
       self.showNowPlayingInfo = [[options objectForKey:@"showIniOSMediaCenter"] boolValue];
    }
-   
+
    if (self.showNowPlayingInfo) {
       //unregister any existing registrations
       [self unregisterAudioInterruptionNotifications];
@@ -99,8 +103,15 @@ RCT_EXPORT_METHOD(play:(NSString *) streamUrl options:(NSDictionary *)options)
       [self registerAudioInterruptionNotifications];
       [self registerRemoteControlEvents];
    }
-   
+
    [self setNowPlayingInfo:true];
+
+   if ([options objectForKey:@"imageUrl"]) {
+     NSURL *imageUrl = [NSURL URLWithString:[options objectForKey:@"imageUrl"]];
+     [self updateControlCenterImage:imageUrl];
+   } else {
+     self.artwork = nil;
+   }
 }
 
 RCT_EXPORT_METHOD(setPlaybackRate:(double) rate)
@@ -445,17 +456,34 @@ RCT_EXPORT_METHOD(getStatus: (RCTResponseSenderBlock) callback)
    [commandCenter.pauseCommand removeTarget:self];
 }
 
+- (void)updateControlCenterImage:(NSURL *)imageUrl
+{
+  dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+  dispatch_async(queue, ^{
+    UIImage *artworkImage = [UIImage imageWithData:[NSData dataWithContentsOfURL:imageUrl]];
+    self.artwork = artworkImage;
+    NSMutableDictionary *nowPlayingInfo = [[MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo mutableCopy];
+    if (artworkImage && nowPlayingInfo) {
+      MPMediaItemArtwork *albumArt = [[MPMediaItemArtwork alloc] initWithImage: artworkImage];
+      bool isPlaying = [[nowPlayingInfo objectForKey:MPNowPlayingInfoPropertyPlaybackRate] floatValue] != 0.0f;
+      [nowPlayingInfo setValue:albumArt forKey:MPMediaItemPropertyArtwork];
+      [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nowPlayingInfo;
+    }
+  });
+}
+
 - (void)setNowPlayingInfo:(bool)isPlaying
 {
    if (self.showNowPlayingInfo) {
       // TODO Get artwork from stream
       // MPMediaItemArtwork *artwork = [[MPMediaItemArtwork alloc]initWithImage:[UIImage imageNamed:@"webradio1"]];
    
-      NSString* appName = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"];
+      NSString* appName = self.appTitle ? self.appTitle : [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"];
       NSDictionary *nowPlayingInfo = [NSDictionary dictionaryWithObjectsAndKeys:
-                                      self.currentSong ? self.currentSong : @"", MPMediaItemPropertyAlbumTitle,
+                                      self.currentSong ? self.currentSong : @"", MPMediaItemPropertyTitle,
                                       @"", MPMediaItemPropertyAlbumArtist,
-                                      appName ? appName : @"AppName", MPMediaItemPropertyTitle,
+                                      appName ? appName : @"AppName", MPMediaItemPropertyAlbumTitle,
+                                      self.artwork ? [[MPMediaItemArtwork alloc] initWithImage:self.artwork] : nil, MPMediaItemPropertyArtwork,
                                       [NSNumber numberWithFloat:isPlaying ? 1.0f : 0.0], MPNowPlayingInfoPropertyPlaybackRate, nil];
       [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nowPlayingInfo;
    } else {

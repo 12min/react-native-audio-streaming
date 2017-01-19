@@ -11,6 +11,8 @@
 @property (nonatomic, readwrite) BOOL showNowPlayingInfo;
 @property (nonatomic, readwrite) NSString *lastUrlString;
 @property (nonatomic, retain) NSString *currentSong;
+@property (nonatomic, readwrite) NSString *appTitle;
+@property (nonatomic, readwrite) UIImage *artwork;
 
 - (void)play:(NSString *) streamUrl options:(NSDictionary *)options;
 - (void)pause;
