@@ -115,6 +115,24 @@ public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
     signal.exitNotification();
   }
 
+  @ReactMethod public void seekToTime(int seconds) {
+    long mili = seconds * 1000;
+
+    signal.seekTo(mili);
+  }
+
+  @ReactMethod public void goBack(int seconds) {
+    long mili = signal.getCurrentPosition() - (seconds * 1000);
+
+    signal.seekTo(mili);
+  }
+
+  @ReactMethod public void goForward(int seconds) {
+    long mili = signal.getCurrentPosition() + (seconds * 1000);
+
+    signal.seekTo(mili);
+  }
+
   @ReactMethod public void getStatus(Callback callback) {
     WritableMap state = Arguments.createMap();
     state.putString("status", signal != null && signal.isPlaying() ? Mode.PLAYING : Mode.STOPPED);

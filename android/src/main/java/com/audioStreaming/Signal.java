@@ -46,6 +46,8 @@ import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 
+import java.util.Timer;
+import java.util.TimerTask;
 import java.io.IOException;
 import java.util.List;
 
@@ -75,6 +77,18 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
 
     private TelephonyManager phoneManager;
     private PhoneListener phoneStateListener;
+
+    private Timer tickTimer;
+    private class tickTask extends TimerTask {
+        public void run() {
+          tick();
+        }
+    }
+
+    public Signal() {
+      tickTimer = new Timer();
+      tickTimer.schedule(new tickTask(), 0, 500);
+    }
 
     @Override
     public void onCreate() {
@@ -107,6 +121,7 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
         registerReceiver(this.eventsReceiver, new IntentFilter(Mode.BUFFERING_END));
         registerReceiver(this.eventsReceiver, new IntentFilter(Mode.METADATA_UPDATED));
         registerReceiver(this.eventsReceiver, new IntentFilter(Mode.ALBUM_UPDATED));
+        registerReceiver(this.eventsReceiver, new IntentFilter(Mode.STREAMING));
 
         this.phoneStateListener = new PhoneListener(this.module);
         this.phoneManager = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
@@ -118,6 +133,20 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
     @Override
     public void onLoadingChanged(boolean isLoading) {
 
+    }
+
+    public void tick() {
+      if (player == null || !isPlaying() || this.getCurrentPosition() < 0) {
+        return;
+      }
+
+      Intent payingIntent = new Intent(Mode.STREAMING);
+
+      payingIntent.putExtra("progress", String.valueOf((double) this.getCurrentPosition() / 1000));
+      payingIntent.putExtra("duration", String.valueOf((double) this.getDuration() / 1000));
+      payingIntent.putExtra("url", this.streamingURL);
+
+      sendBroadcast(payingIntent);
     }
 
     @Override
@@ -146,7 +175,8 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
     }
 
     @Override
-    public void onTimelineChanged(Timeline timeline, Object manifest) {}
+    public void onTimelineChanged(Timeline timeline, Object manifest) {
+    }
 
 
     @Override
@@ -191,9 +221,9 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
 
     public void play(String url) {
         if (player != null ) {
-            player.setPlayWhenReady(false);
-            player.stop();
-            player.seekTo(0);
+            player.setPlayWhenReady(true);
+
+            return;
         }
 
         boolean playWhenReady = true; // TODO Allow user to customize this
@@ -208,7 +238,7 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
         // Create source
         ExtractorsFactory extractorsFactory = new DefaultExtractorsFactory();
         DefaultBandwidthMeter bandwidthMeter = new DefaultBandwidthMeter();
-        DataSource.Factory dataSourceFactory = new AudioStreamingDataSourceFactory(this.getApplication(), getDefaultUserAgent(), bandwidthMeter);
+        DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(this.getApplication(), getDefaultUserAgent(), bandwidthMeter);
         MediaSource audioSource = new ExtractorMediaSource(Uri.parse(this.streamingURL), dataSourceFactory, extractorsFactory, mainHandler, this);
 
         // Start preparing audio
@@ -226,7 +256,7 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
     public void pause() {
         Assertions.assertNotNull(player);
         player.setPlayWhenReady(false);
-        sendBroadcast(new Intent(Mode.STOPPED));
+        sendBroadcast(new Intent(Mode.PAUSED));
     }
 
     public void resume() {
@@ -241,6 +271,10 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
     }
 
     public boolean isPlaying() {
+        if (player == null) {
+          return false;
+        }
+
         Assertions.assertNotNull(player);
         return player.getPlayWhenReady();
     }
