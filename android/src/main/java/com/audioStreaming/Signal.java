@@ -8,7 +8,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
@@ -16,9 +18,8 @@ import android.support.v4.app.TaskStackBuilder;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.view.View;
 import android.widget.RemoteViews;
-import android.os.Build;
-import android.net.Uri;
 
 import com.facebook.infer.annotation.Assertions;
 import com.google.android.exoplayer2.DefaultLoadControl;
@@ -30,7 +31,6 @@ import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
 import com.google.android.exoplayer2.extractor.ExtractorsFactory;
-import com.google.android.exoplayer2.extractor.ts.AdtsExtractor;
 import com.google.android.exoplayer2.metadata.MetadataRenderer;
 import com.google.android.exoplayer2.metadata.id3.ApicFrame;
 import com.google.android.exoplayer2.metadata.id3.GeobFrame;
@@ -46,10 +46,13 @@ import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.io.IOException;
-import java.util.List;
 
 public class Signal extends Service implements ExoPlayer.EventListener, MetadataRenderer.Output<List<Id3Frame>>, ExtractorMediaSource.EventListener {
     private static final String TAG = "ReactNative";
@@ -77,6 +80,10 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
 
     private TelephonyManager phoneManager;
     private PhoneListener phoneStateListener;
+
+    private String streamTitle;
+    private String appTitle;
+    private String imageUrl;
 
     private Timer tickTimer;
     private class tickTask extends TimerTask {
@@ -136,29 +143,30 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
     }
 
     public void tick() {
-      if (player == null || !isPlaying() || this.getCurrentPosition() < 0) {
+      if (player == null || !isPlaying() || this.getDuration() < 0) {
         return;
       }
 
-      Intent payingIntent = new Intent(Mode.STREAMING);
+      Intent playingIntent = new Intent(Mode.STREAMING);
 
-      payingIntent.putExtra("progress", String.valueOf((double) this.getCurrentPosition() / 1000));
-      payingIntent.putExtra("duration", String.valueOf((double) this.getDuration() / 1000));
-      payingIntent.putExtra("url", this.streamingURL);
+      playingIntent.putExtra("progress", String.valueOf((double) this.getCurrentPosition() / 1000));
+      playingIntent.putExtra("duration", String.valueOf((double) this.getDuration() / 1000));
+      playingIntent.putExtra("url", this.streamingURL);
 
-      sendBroadcast(payingIntent);
+      sendBroadcast(playingIntent);
     }
 
     @Override
     public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
         Log.d("onPlayerStateChanged", ""+playbackState);
 
+        toggleNotificationIcon(!isPlaying());
+
         switch (playbackState) {
             case ExoPlayer.STATE_IDLE:
                 sendBroadcast(new Intent(Mode.IDLE));
                 break;
             case ExoPlayer.STATE_BUFFERING:
-
                 sendBroadcast(new Intent(Mode.BUFFERING_START));
                 break;
             case ExoPlayer.STATE_READY:
@@ -219,8 +227,12 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
      *  Player controls
      */
 
-    public void play(String url) {
-        if (player != null ) {
+    public void play(String url, HashMap<String, String> streamingOptions) {
+        this.streamTitle = streamingOptions.get("streamTitle");
+        this.appTitle = streamingOptions.get("appTitle");
+        this.imageUrl = streamingOptions.get("imageUrl");
+
+        if (player != null) {
             player.setPlayWhenReady(true);
 
             return;
@@ -266,7 +278,11 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
 
     public void stop() {
         Assertions.assertNotNull(player);
+
         player.setPlayWhenReady(false);
+        player.seekTo(0);
+        player = null;
+
         sendBroadcast(new Intent(Mode.STOPPED));
     }
 
@@ -372,7 +388,6 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
         notifyBuilder = new NotificationCompat.Builder(this.context)
                 .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off) // TODO Use app icon instead
                 .setContentText("")
-                .setOngoing(true)
                 .setContent(remoteViews);
 
         Intent resultIntent = new Intent(this.context, this.clsActivity);
@@ -387,10 +402,40 @@ public class Signal extends Service implements ExoPlayer.EventListener, Metadata
                 PendingIntent.FLAG_UPDATE_CURRENT);
 
         notifyBuilder.setContentIntent(resultPendingIntent);
+
         remoteViews.setOnClickPendingIntent(R.id.btn_streaming_notification_play, makePendingIntent(BROADCAST_PLAYBACK_PLAY));
+        remoteViews.setOnClickPendingIntent(R.id.btn_streaming_notification_pause, makePendingIntent(BROADCAST_PLAYBACK_PLAY));
         remoteViews.setOnClickPendingIntent(R.id.btn_streaming_notification_stop, makePendingIntent(BROADCAST_EXIT));
+        remoteViews.setTextViewText(R.id.song_name_notification, this.streamTitle);
+        remoteViews.setTextViewText(R.id.album_name_notification, this.appTitle);
+        remoteViews.setImageViewBitmap(R.id.album_image_notification, BitmapUtils.loadBitmap(this.imageUrl));
+
         notifyManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         notifyManager.notify(NOTIFY_ME_ID, notifyBuilder.build());
+    }
+
+    public void toggleNotificationIcon(boolean isPlaying) {
+      if (remoteViews == null || notifyBuilder == null) {
+        return;
+      }
+
+      if (isPlaying) {
+        setNotificationPlayIcon();
+      } else {
+        setNotificationPauseIcon();
+      }
+
+      notifyManager.notify(NOTIFY_ME_ID, notifyBuilder.build());
+    }
+
+    public void setNotificationPlayIcon() {
+      remoteViews.setInt(R.id.btn_streaming_notification_play, "setVisibility", View.VISIBLE);
+      remoteViews.setInt(R.id.btn_streaming_notification_pause, "setVisibility", View.GONE);
+    }
+
+    public void setNotificationPauseIcon() {
+      remoteViews.setInt(R.id.btn_streaming_notification_play, "setVisibility", View.GONE);
+      remoteViews.setInt(R.id.btn_streaming_notification_pause, "setVisibility", View.VISIBLE);
     }
 
     public void clearNotification() {

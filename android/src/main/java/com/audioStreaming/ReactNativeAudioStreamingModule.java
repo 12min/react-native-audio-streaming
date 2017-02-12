@@ -17,6 +17,8 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import javax.annotation.Nullable;
 
+import java.util.HashMap;
+
 public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
     implements ServiceConnection {
 
@@ -86,11 +88,17 @@ public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
 
   @ReactMethod public void play(String streamingURL, ReadableMap options) {
     this.shouldShowNotification = options.hasKey(SHOULD_SHOW_NOTIFICATION) && options.getBoolean(SHOULD_SHOW_NOTIFICATION);
-    playInternal(streamingURL);
+    HashMap<String, String> streamingOptions = new HashMap<>();
+
+    streamingOptions.put("streamTitle", options.getString("streamTitle"));
+    streamingOptions.put("appTitle", options.getString("appTitle"));
+    streamingOptions.put("imageUrl", options.getString("imageUrl"));
+
+    playInternal(streamingURL, streamingOptions);
   }
 
-  private void playInternal(String streamingURL) {
-    signal.play(streamingURL);
+  private void playInternal(String streamingURL, HashMap<String, String> streamingOptions) {
+    signal.play(streamingURL, streamingOptions);
 
     if (shouldShowNotification) {
       signal.showNotification();
@@ -103,7 +111,7 @@ public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
 
   @ReactMethod public void pause() {
     // Not implemented on aac
-    this.stop();
+    signal.pause();
   }
 
   @ReactMethod public void resume() {
