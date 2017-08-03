@@ -425,35 +425,32 @@ RCT_EXPORT_METHOD(getStatus: (RCTResponseSenderBlock) callback)
 
 - (void)registerRemoteControlEvents
 {
+   NSLog(@"registered remote control events");
    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
-   [commandCenter.playCommand addTarget:self action:@selector(didReceivePlayCommand:)];
-   [commandCenter.pauseCommand addTarget:self action:@selector(didReceivePauseCommand:)];
-   commandCenter.playCommand.enabled = YES;
+   [commandCenter.togglePlayPauseCommand addTarget:self action:@selector(didReceivePlayPauseCommand:)];
+   commandCenter.togglePlayPauseCommand.enabled = YES;
+   commandCenter.playCommand.enabled = NO;
    commandCenter.pauseCommand.enabled = YES;
    commandCenter.stopCommand.enabled = NO;
    commandCenter.nextTrackCommand.enabled = NO;
    commandCenter.previousTrackCommand.enabled = NO;
 }
 
-- (MPRemoteCommandHandlerStatus)didReceivePlayCommand:(MPRemoteCommand *)event
+- (MPRemoteCommandHandlerStatus)didReceivePlayPauseCommand:(MPRemoteCommand *)event
 {
-   NSLog(@"didReceivePlayCommand");
-   [self resume];
-   return MPRemoteCommandHandlerStatusSuccess;
-}
-
-- (MPRemoteCommandHandlerStatus)didReceivePauseCommand:(MPRemoteCommand *)event
-{
-   NSLog(@"didReceivePauseCommand");
-   [self pause];
+   NSLog(@"didReceivePlayPauseCommand");
+   if (self.audioPlayer && self.audioPlayer.state == STKAudioPlayerStatePlaying) {
+      [self pause];
+   } else {
+      [self resume];
+   }
    return MPRemoteCommandHandlerStatusSuccess;
 }
 
 - (void)unregisterRemoteControlEvents
 {
    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
-   [commandCenter.playCommand removeTarget:self];
-   [commandCenter.pauseCommand removeTarget:self];
+   [commandCenter.togglePlayPauseCommand removeTarget:self];
 }
 
 - (void)updateControlCenterImage:(NSURL *)imageUrl
