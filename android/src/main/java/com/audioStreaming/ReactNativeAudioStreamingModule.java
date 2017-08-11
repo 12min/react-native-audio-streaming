@@ -16,6 +16,7 @@ import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import javax.annotation.Nullable;
+import android.app.Activity;
 
 import java.util.HashMap;
 
@@ -41,8 +42,9 @@ public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
   }
 
   public Class<?> getClassActivity() {
-    if (this.clsActivity == null) {
-      this.clsActivity = getCurrentActivity().getClass();
+    Activity activity = getCurrentActivity();
+    if (this.clsActivity == null && activity != null) {
+      this.clsActivity = activity.getClass();
     }
     return this.clsActivity;
   }
@@ -90,9 +92,9 @@ public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
     this.shouldShowNotification = options.hasKey(SHOULD_SHOW_NOTIFICATION) && options.getBoolean(SHOULD_SHOW_NOTIFICATION);
     HashMap<String, String> streamingOptions = new HashMap<>();
 
-    streamingOptions.put("streamTitle", options.getString("streamTitle"));
-    streamingOptions.put("appTitle", options.getString("appTitle"));
-    streamingOptions.put("imageUrl", options.getString("imageUrl"));
+    streamingOptions.put("streamTitle", options.hasKey("streamTitle")?options.getString("streamTitle"):"");
+    streamingOptions.put("appTitle", options.hasKey("appTitle")?options.getString("appTitle"):"");
+    streamingOptions.put("imageUrl", options.hasKey("imageUrl")?options.getString("imageUrl"):"");
 
     playInternal(streamingURL, streamingOptions);
   }

@@ -22,8 +22,8 @@ public class EventsReceiver extends BroadcastReceiver {
 
         switch(intent.getAction()) {
           case "METADATA_UPDATED":
-            params.putString("key", intent.getStringExtra("key"));
-            params.putString("value", intent.getStringExtra("value"));
+            params.putString("key",  "StreamTitle");
+            params.putString("value", intent.getStringExtra("StreamTitle"));
           break;
           case "STREAMING":
             params.putDouble("duration", Double.parseDouble(intent.getStringExtra("duration")));

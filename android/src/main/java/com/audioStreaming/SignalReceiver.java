@@ -26,9 +26,12 @@ class SignalReceiver extends BroadcastReceiver {
               this.signal.resume();
             }
         } else if (action.equals(Signal.BROADCAST_EXIT)) {
-            this.signal.getNotifyManager().cancelAll();
-            this.signal.stop();
-            this.signal.exitNotification();
+            //Validate nullPointer Exception
+            if(this.signal!=null ){
+                this.signal.stop();
+                this.signal.exitNotification();
+            }
+
         }
     }
 }
