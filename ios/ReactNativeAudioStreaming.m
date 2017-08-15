@@ -428,8 +428,10 @@ RCT_EXPORT_METHOD(getStatus: (RCTResponseSenderBlock) callback)
    NSLog(@"registered remote control events");
    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
    [commandCenter.togglePlayPauseCommand addTarget:self action:@selector(didReceivePlayPauseCommand:)];
+   [commandCenter.playCommand addTarget:self action:@selector(didReceivePlayCommand:)];
+   [commandCenter.pauseCommand addTarget:self action:@selector(didReceivePauseCommand:)];
    commandCenter.togglePlayPauseCommand.enabled = YES;
-   commandCenter.playCommand.enabled = NO;
+   commandCenter.playCommand.enabled = YES;
    commandCenter.pauseCommand.enabled = YES;
    commandCenter.stopCommand.enabled = NO;
    commandCenter.nextTrackCommand.enabled = NO;
@@ -447,10 +449,27 @@ RCT_EXPORT_METHOD(getStatus: (RCTResponseSenderBlock) callback)
    return MPRemoteCommandHandlerStatusSuccess;
 }
 
+
+- (MPRemoteCommandHandlerStatus)didReceivePlayCommand:(MPRemoteCommand *)event
+{
+   NSLog(@"didReceivePlayCommand");
+   [self resume];
+   return MPRemoteCommandHandlerStatusSuccess;
+}
+
+- (MPRemoteCommandHandlerStatus)didReceivePauseCommand:(MPRemoteCommand *)event
+{
+   NSLog(@"didReceivePauseCommand");
+   [self pause];
+   return MPRemoteCommandHandlerStatusSuccess;
+}
+
 - (void)unregisterRemoteControlEvents
 {
    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
    [commandCenter.togglePlayPauseCommand removeTarget:self];
+   [commandCenter.playCommand removeTarget:self];
+   [commandCenter.pauseCommand removeTarget:self];
 }
 
 - (void)updateControlCenterImage:(NSURL *)imageUrl
