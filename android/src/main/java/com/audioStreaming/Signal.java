@@ -98,7 +98,7 @@ public class Signal extends Service implements Player.EventListener, MetadataRen
     private String streamTitle;
     private String appTitle;
     private String imageUrl;
-
+    private  boolean playing;
     private Timer tickTimer;
     private class tickTask extends TimerTask {
         public void run() {
@@ -168,13 +168,15 @@ public class Signal extends Service implements Player.EventListener, MetadataRen
       playingIntent.putExtra("url", this.streamingURL);
 
       sendBroadcast(playingIntent);
+        if(playing!=isPlaying()){
+            playing=isPlaying();
+            toggleNotificationIcon(!isPlaying());
+        }
     }
 
     @Override
     public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
         Log.d("onPlayerStateChanged", ""+playbackState);
-
-        toggleNotificationIcon(!isPlaying());
 
         switch (playbackState) {
             case ExoPlayer.STATE_IDLE:
@@ -194,6 +196,7 @@ public class Signal extends Service implements Player.EventListener, MetadataRen
                 sendBroadcast(new Intent(Mode.BUFFERING_START));
                 break;
         }
+        toggleNotificationIcon(!isPlaying());
     }
 
     @Override
@@ -229,6 +232,8 @@ public class Signal extends Service implements Player.EventListener, MetadataRen
                             printMetadata(metadata, "      ");
                             Log.d(TAG, "    ]");
                             break;
+                        }else{
+                            updateTitle(this.streamTitle,"",this.imageUrl);
                         }
                     }
                 }
@@ -341,29 +346,25 @@ public class Signal extends Service implements Player.EventListener, MetadataRen
 
     public void start() {
         if(player!=null) {
-            Assertions.assertNotNull(player);
+          player.setPlayWhenReady(true);
         }
-        player.setPlayWhenReady(true);
     }
 
     public void pause() {
-        if(player!=null) {
-            Assertions.assertNotNull(player);
+        if(player!=null) { 
             player.setPlayWhenReady(false);
         }
         sendBroadcast(new Intent(Mode.PAUSED));
     }
 
     public void resume() {
-        if(player !=null) {
-            Assertions.assertNotNull(player);
+        if(player !=null) { 
             player.setPlayWhenReady(true);
         }
     }
 
     public void stop() {
-        if(player !=null) {
-            Assertions.assertNotNull(player);
+        if(player !=null) { 
             player.setPlayWhenReady(false);
             player = null;
         }
@@ -374,30 +375,34 @@ public class Signal extends Service implements Player.EventListener, MetadataRen
     public boolean isPlaying() {
         if (player == null) {
           return false;
-        }
-
-        Assertions.assertNotNull(player);
+        } 
         return player.getPlayWhenReady();
     }
 
-    public long getDuration() {
-        Assertions.assertNotNull(player);
-        return player.getDuration();
+    public long getDuration() { 
+        if(player !=null) { 
+            return player.getDuration();
+        }
+        return 0;
     }
 
-    public long getCurrentPosition() {
-        Assertions.assertNotNull(player);
-        return player.getCurrentPosition();
+    public long getCurrentPosition() { 
+        if (player!=null){
+         return player.getCurrentPosition();
+        }
+        return 0;
     }
 
-    public int getBufferPercentage() {
-        Assertions.assertNotNull(player);
-        return player.getBufferedPercentage();
+    public int getBufferPercentage() { 
+        if (player!=null){
+            return player.getBufferedPercentage();
+        }
+        return 0;
     }
 
-    public void seekTo(long timeMillis) {
-        Assertions.assertNotNull(player);
-        player.seekTo(timeMillis);
+    public void seekTo(long timeMillis) { 
+        if(player!=null)
+            player.seekTo(timeMillis);
     }
 
     public boolean isConnected() {
@@ -458,6 +463,11 @@ public class Signal extends Service implements Player.EventListener, MetadataRen
                         eventMessage.schemeIdUri, eventMessage.id, eventMessage.value));
             }
         }
+        updateTitle(title,author,urlImage);
+    }
+
+    private void updateTitle (String title, String author, String urlImage){
+
         if(!title.equals(""))
             this.streamTitle = title+""+author;
         if(!urlImage.equals(""))
@@ -533,7 +543,8 @@ public class Signal extends Service implements Player.EventListener, MetadataRen
         remoteViews.setImageViewBitmap(R.id.album_image_notification, BitmapUtils.loadBitmap(this.imageUrl));
 
         notifyManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        notifyManager.notify(NOTIFY_ME_ID, notifyBuilder.build());
+        startForeground(NOTIFY_ME_ID,notifyBuilder.build());
+        //notifyManager.notify(NOTIFY_ME_ID, notifyBuilder.build());
     }
 
     public void toggleNotificationIcon(boolean isPlaying) {
@@ -542,12 +553,14 @@ public class Signal extends Service implements Player.EventListener, MetadataRen
       }
 
       if (isPlaying) {
+          Log.d(SIGNALTAG,  "playing");
         setNotificationPlayIcon();
       } else {
+          Log.d(SIGNALTAG,  "No playing");
         setNotificationPauseIcon();
       }
-
-      notifyManager.notify(NOTIFY_ME_ID, notifyBuilder.build());
+        startForeground(NOTIFY_ME_ID,notifyBuilder.build());
+     // notifyManager.notify(NOTIFY_ME_ID, notifyBuilder.build());
     }
 
     public void setNotificationPlayIcon() {
@@ -574,6 +587,7 @@ public class Signal extends Service implements Player.EventListener, MetadataRen
             clearNotification();
             notifyBuilder = null;
             notifyManager = null;
+            stopForeground(true);
         }catch (Exception ex){
             String msg = ex.getMessage();
             Log.d(TAG, msg != null ? msg : "Exit notification error");

@@ -101,8 +101,8 @@ public class ReactNativeAudioStreamingModule extends ReactContextBaseJavaModule
 
   private void playInternal(String streamingURL, HashMap<String, String> streamingOptions) {
     signal.play(streamingURL, streamingOptions);
-
-    if (shouldShowNotification) {
+    // the activity  does not show notification (when the play button is pressed on notification)
+    if (shouldShowNotification &&  clsActivity!=null && getCurrentActivity()!=null) {
       signal.showNotification();
     }
   }
