@@ -44,12 +44,15 @@ RCT_EXPORT_MODULE()
    if (self.audioPlayer.currentlyPlayingQueueItemId != nil && self.audioPlayer.state == STKAudioPlayerStatePlaying) {
       NSNumber *progress = [NSNumber numberWithFloat:self.audioPlayer.progress];
       NSNumber *duration = [NSNumber numberWithFloat:self.audioPlayer.duration];
+      NSNumber *playbackRate = [NSNumber numberWithFloat:self.audioPlayer.rate];
       NSString *url = [NSString stringWithString:self.audioPlayer.currentlyPlayingQueueItemId];
+      
       
       [self.bridge.eventDispatcher sendDeviceEventWithName:@"AudioBridgeEvent" body:@{
                                                                                  @"status": @"STREAMING",
                                                                                  @"progress": progress,
                                                                                  @"duration": duration,
+                                                                                 @"playbackRate": playbackRate,
                                                                                  @"url": url,
                                                                                  }];
    }
