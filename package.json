@@ -21,9 +21,12 @@
     "test": "echo \"Not test yet sadly :(\" && exit 0"
   },
   "peerDependencies": {
-    "react-native": ">=0.31.0"
+    "react-native": "^0.50.0"
   },
   "devDependencies": {
-    "react-native": ">=0.31.0"
+    "react-native": "^0.50.0"
+  },
+  "dependencies": {
+    "prop-types": "^15.6.0"
   }
 }
